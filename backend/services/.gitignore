@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual Environment
+venv/
+.env
+
+# VS Code
+.vscode/
+
+# Python cache
+.pytest_cache/
+
+# Uploaded PDFs
+backend/uploads/
+
+# FAISS Vector Store
+backend/vectorstore/
+
+# Metadata
+backend/metadata/chunks.pkl
+backend/metadata/indexed_files.json
+
+# OS
+.DS_Store
+Thumbs.db
