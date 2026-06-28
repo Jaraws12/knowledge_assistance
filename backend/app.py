@@ -6,9 +6,25 @@ from services.ingestion_service import ingest_pdf
 from services.metadata_service import get_indexed_files
 from services.bm25_service import build_index
 from services.memory_service import clear_history
+from fastapi.middleware.cors import CORSMiddleware
+from services.chunk_service import get_chunk
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
-
+app.mount(
+    "/uploads",
+    StaticFiles(directory="uploads"),
+    name="uploads"
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Build BM25 index when the server starts
 @app.on_event("startup")
@@ -68,3 +84,23 @@ async def clear_chat(req: ClearChatRequest):
         "message": "Chat history cleared.",
         "session_id": req.session_id
     }    
+
+@app.get("/chunk")
+def read_chunk(
+    filename: str,
+    page: int,
+    chunk: int
+):
+
+    result = get_chunk(
+        filename,
+        page,
+        chunk
+    )
+
+    if result is None:
+        return {
+            "error": "Chunk not found"
+        }
+
+    return result    
