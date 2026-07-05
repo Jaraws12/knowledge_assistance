@@ -2,6 +2,8 @@ from services.vectorstore_service import similarity_search
 from services.bm25_service import bm25_search
 from services.reranker_service import rerank
 from services.llm_service import generate_answer
+from services.llm_service import stream_answer
+import json
 from services.memory_service import (
     add_message,
     get_history,
@@ -11,13 +13,22 @@ from services.memory_service import (
 
 def ask_question(
     question: str,
-    session_id: str
+    session_id: str,
+    documents: list[str] = None
 ):
 
     # Retrieve more candidates
     add_message(session_id, "user", question)
-    vector_results = similarity_search(question, k=10)
-    bm25_results = bm25_search(question, k=10)
+    vector_results = similarity_search(
+    question,
+    documents=documents,
+    k=10
+)
+    bm25_results = bm25_search(
+    question,
+    documents_filter=documents,
+    k=10
+)
 
     # Merge results and remove duplicates
     combined = {}
@@ -100,3 +111,82 @@ CONTENT:
         "answer": answer,
         "sources": sources
     }
+ 
+
+def stream_question(
+    question: str,
+    session_id: str,
+    documents: list[str] = None
+):
+    """
+    Stream the answer token by token.
+    """
+
+    # Retrieve from both retrievers
+    vector_results = similarity_search(
+    question,
+    documents=documents,
+    k=5
+)
+    bm25_results = bm25_search(
+    question,
+    documents_filter=documents,
+    k=5
+)
+
+    combined = {}
+
+    for doc in vector_results:
+        combined[doc.page_content] = doc
+
+    for doc in bm25_results:
+        combined[doc.page_content] = doc
+
+    results = list(combined.values())
+
+    context = ""
+
+    sources = []
+    seen = set()
+
+    for doc in results:
+
+        filename = doc.metadata.get("filename")
+        page = doc.metadata.get("page")
+        chunk = doc.metadata.get("chunk_id")
+
+        context += f"""
+SOURCE:
+Document: {filename}
+Page: {page}
+
+CONTENT:
+{doc.page_content}
+
+------------------
+"""
+
+        key = (filename, page)
+
+        if key not in seen:
+
+            seen.add(key)
+
+            sources.append({
+                "filename": filename,
+                "page": page,
+                "chunk": chunk,
+                "excerpt": (
+                    doc.page_content[:250] + "..."
+                    if len(doc.page_content) > 250
+                    else doc.page_content
+                )
+            })
+
+    # Stream answer tokens
+    for token in stream_answer(question, context):
+        yield token
+
+    # Send sources at the end as JSON
+    yield "\n<END_SOURCES>\n"
+    yield json.dumps(sources)    

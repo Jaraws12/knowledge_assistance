@@ -14,7 +14,6 @@ def load_chunks():
     if not os.path.exists(CHUNK_FILE):
         return []
 
-    # File exists but is empty
     if os.path.getsize(CHUNK_FILE) == 0:
         return []
 
@@ -23,6 +22,7 @@ def load_chunks():
             return pickle.load(f)
     except (EOFError, pickle.UnpicklingError):
         return []
+
 
 def save_chunks(chunks):
 
@@ -49,9 +49,14 @@ def build_index():
     bm25 = BM25Okapi(corpus)
 
 
-def bm25_search(query: str, k: int = 5):
+def bm25_search(
+    query: str,
+    documents_filter: list[str] = None,
+    k: int = 5
+):
     """
-    Search documents using BM25 and attach the BM25 score.
+    Search documents using BM25.
+    Optionally restrict the search to selected documents.
     """
 
     global bm25
@@ -72,11 +77,19 @@ def bm25_search(query: str, k: int = 5):
 
     results = []
 
-    for score, doc in ranked[:k]:
+    for score, doc in ranked:
 
-        # Store BM25 score inside metadata
+        filename = doc.metadata.get("filename")
+
+        # Skip documents that are not selected
+        if documents_filter and filename not in documents_filter:
+            continue
+
         doc.metadata["bm25_score"] = float(score)
 
         results.append(doc)
+
+        if len(results) >= k:
+            break
 
     return results

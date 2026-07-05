@@ -1,7 +1,10 @@
 from fastapi import FastAPI, UploadFile
 from pydantic import BaseModel
-
-from services.retrieval_service import ask_question
+from fastapi.responses import StreamingResponse
+from services.retrieval_service import (
+    ask_question,
+    stream_question
+)
 from services.ingestion_service import ingest_pdf
 from services.metadata_service import get_indexed_files
 from services.bm25_service import build_index
@@ -9,6 +12,8 @@ from services.memory_service import clear_history
 from fastapi.middleware.cors import CORSMiddleware
 from services.chunk_service import get_chunk
 from fastapi.staticfiles import StaticFiles
+from services.document_service import delete_document
+
 
 app = FastAPI()
 app.mount(
@@ -33,9 +38,12 @@ async def startup_event():
     print("✅ BM25 Index Loaded")
 
 
+from typing import List
+
 class QuestionRequest(BaseModel):
     session_id: str
     question: str
+    documents: List[str] = []
 
 class ClearChatRequest(BaseModel):
     session_id: str
@@ -66,14 +74,32 @@ def list_documents():
     }
 
 
+@app.delete("/documents/{filename}")
+async def delete_file(filename: str):
+
+    return delete_document(filename)
+
 @app.post("/ask")
 async def ask(req: QuestionRequest):
 
-    return ask_question(
-        question=req.question,
-        session_id=req.session_id
-    )
+   return ask_question(
+    question=req.question,
+    session_id=req.session_id,
+    documents=req.documents
+)
 
+
+@app.post("/ask-stream")
+async def ask_stream(req: QuestionRequest):
+
+    return StreamingResponse(
+    stream_question(
+        question=req.question,
+        session_id=req.session_id,
+        documents=req.documents
+    ),
+    media_type="text/plain"
+)
 
 @app.post("/clear-chat")
 async def clear_chat(req: ClearChatRequest):

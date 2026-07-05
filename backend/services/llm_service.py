@@ -90,3 +90,32 @@ Rules:
     response = llm.invoke(prompt)
 
     return response.content.strip()
+
+
+
+def stream_answer(question: str, context: str):
+    prompt = f"""
+You are a helpful assistant.
+
+Answer ONLY from the provided context.
+
+If the answer is not present in the context, reply exactly:
+
+"I couldn't find that information in the uploaded documents."
+
+Do not make up facts.
+Do not mention page numbers.
+Do not mention sources.
+
+Context:
+
+{context}
+
+Question:
+{question}
+"""
+
+    for chunk in llm.stream(prompt):
+        if chunk.content:
+            yield chunk.content
+

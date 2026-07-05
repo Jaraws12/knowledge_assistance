@@ -48,29 +48,59 @@ def ingest_document(pdf_path: str):
     return chunks
 
 
-def update_vectorstore(chunks):
-    """Create a new FAISS index or append to an existing one."""
+def rebuild_vectorstore(all_chunks):
+    """
+    Rebuild the FAISS vector store from all documents.
+    """
 
-    vectorstore_path = "vectorstore"
+    vectorstore_path = Path("vectorstore")
 
-    if Path(vectorstore_path).exists():
+    # Delete old index
+    if vectorstore_path.exists():
+
+        for file in vectorstore_path.iterdir():
+            file.unlink()
+
+    else:
+        vectorstore_path.mkdir()
+
+    # No documents left
+    if len(all_chunks) == 0:
+        return
+
+    db = FAISS.from_documents(
+        all_chunks,
+        embedding_model
+    )
+
+    db.save_local(str(vectorstore_path))
+    
+    
+def update_vectorstore(new_chunks):
+    """
+    Append new chunks to an existing vector store.
+    """
+
+    vectorstore_path = Path("vectorstore")
+
+    if vectorstore_path.exists() and any(vectorstore_path.iterdir()):
 
         db = FAISS.load_local(
-            vectorstore_path,
+            str(vectorstore_path),
             embedding_model,
             allow_dangerous_deserialization=True
         )
 
-        db.add_documents(chunks)
+        db.add_documents(new_chunks)
 
     else:
 
         db = FAISS.from_documents(
-            chunks,
+            new_chunks,
             embedding_model
         )
 
-    db.save_local(vectorstore_path)
+    db.save_local(str(vectorstore_path))    
 
 
 async def ingest_pdf(file: UploadFile):

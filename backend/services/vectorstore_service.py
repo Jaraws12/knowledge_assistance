@@ -22,20 +22,38 @@ def get_vectorstore():
     )
 
 
-def similarity_search(query: str, k: int = 5):
+def similarity_search(
+    query: str,
+    documents: list[str] = None,
+    k: int = 5
+):
 
     db = get_vectorstore()
 
     if db is None:
         return []
 
+    # Retrieve extra results because we'll filter afterwards
     results = db.similarity_search_with_score(
-    query,
-    k=k
-)
+        query,
+        k=25
+    )
+
     docs = []
+
     for doc, score in results:
+
+        filename = doc.metadata.get("filename")
+
+        # If document filter is provided,
+        # ignore documents that are not selected.
+        if documents and filename not in documents:
+            continue
+
         doc.metadata["vector_score"] = float(score)
         docs.append(doc)
-    return docs    
-    
+
+        if len(docs) >= k:
+            break
+
+    return docs

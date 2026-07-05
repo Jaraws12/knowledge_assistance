@@ -8,6 +8,7 @@ import SourceModal from "./SourceModal";
 export default function ChatWindow({
   messages,
   setMessages,
+  selectedDocuments,
 }) {
 
   const [selectedSource, setSelectedSource] = useState(null);
@@ -31,40 +32,127 @@ export default function ChatWindow({
 
   const handleSend = async (question) => {
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: "user",
-        content: question,
-      },
-    ]);
+  // Add user message
+  setMessages((prev) => [
+    ...prev,
+    {
+      role: "user",
+      content: question,
+    },
+  ]);
 
-    const sessionId =
-      localStorage.getItem("session_id") ||
-      crypto.randomUUID();
+  const sessionId =
+    localStorage.getItem("session_id") ||
+    crypto.randomUUID();
 
-    localStorage.setItem("session_id", sessionId);
+  localStorage.setItem("session_id", sessionId);
 
-    try {
+  // Create empty assistant message
+  setMessages((prev) => [
+    ...prev,
+    {
+      role: "assistant",
+      content: "",
+      sources: [],
+    },
+  ]);
 
-      const res = await api.post("/ask", {
-        question,
-        session_id: sessionId,
+  try {
+
+    const response = await fetch(
+  "http://localhost:8000/ask-stream",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      question,
+      session_id: sessionId,
+      documents: selectedDocuments,
+    }),
+  }
+);
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    let answer = "";
+    let sources = [];
+    let buffer = "";
+    let readingSources = false;
+
+    while (true) {
+
+      const { done, value } = await reader.read();
+
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+
+      if (!readingSources) {
+
+        if (chunk.includes("<END_SOURCES>")) {
+
+          const parts = chunk.split("<END_SOURCES>");
+
+          answer += parts[0];
+
+          buffer += parts[1];
+
+          readingSources = true;
+
+        } else {
+
+          answer += chunk;
+
+        }
+
+        setMessages((prev) => {
+
+          const updated = [...prev];
+
+          updated[updated.length - 1] = {
+            role: "assistant",
+            content: answer,
+            sources,
+          };
+
+          return updated;
+
+        });
+
+      } else {
+
+        buffer += chunk;
+
+      }
+    }
+
+    if (buffer.trim()) {
+
+      sources = JSON.parse(buffer);
+
+      setMessages((prev) => {
+
+        const updated = [...prev];
+
+        updated[updated.length - 1] = {
+          role: "assistant",
+          content: answer,
+          sources,
+        };
+
+        return updated;
+
       });
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: res.data.answer,
-          sources: res.data.sources,
-        },
-      ]);
-
-    } catch (err) {
-      console.error(err);
     }
-  };
+
+  } catch (err) {
+    console.error(err);
+  }
+};
 
   return (
     <>
