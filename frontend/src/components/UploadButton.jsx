@@ -15,7 +15,8 @@ export default function UploadButton({ onUpload }) {
 
     const formData = new FormData();
     formData.append("file", file);
-
+ 
+    
     try {
       const res = await api.post("/upload", formData, {
         headers: {
