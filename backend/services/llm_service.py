@@ -8,20 +8,15 @@ llm = ChatGoogleGenerativeAI(
 )
 
 
-def generate_answer(
+def build_prompt(
     question: str,
     context: str,
     history: list
 ):
     """
-    Generates an answer using:
-    1. Conversation history
-    2. Retrieved document context
+    Builds a common prompt used by both
+    normal and streaming responses.
     """
-
-    # ----------------------------
-    # Convert history into text
-    # ----------------------------
 
     conversation = ""
 
@@ -33,11 +28,7 @@ def generate_answer(
             f"{role}: {message['content']}\n"
         )
 
-    # ----------------------------
-    # Prompt
-    # ----------------------------
-
-    prompt = f"""
+    return f"""
 You are a helpful AI assistant.
 
 Your job is to answer ONLY using the retrieved context.
@@ -78,7 +69,8 @@ Rules:
 
 3. Never hallucinate.
 
-4. If context is insufficient, say you couldn't find it.
+4. If context is insufficient, say:
+"I couldn't find that information in the uploaded documents."
 
 5. Do NOT mention page numbers.
 
@@ -87,35 +79,38 @@ Rules:
 7. Keep the answer concise and natural.
 """
 
+
+def generate_answer(
+    question: str,
+    context: str,
+    history: list
+):
+
+    prompt = build_prompt(
+        question,
+        context,
+        history
+    )
+
     response = llm.invoke(prompt)
 
     return response.content.strip()
 
 
+def stream_answer(
+    question: str,
+    context: str,
+    history: list
+):
 
-def stream_answer(question: str, context: str):
-    prompt = f"""
-You are a helpful assistant.
-
-Answer ONLY from the provided context.
-
-If the answer is not present in the context, reply exactly:
-
-"I couldn't find that information in the uploaded documents."
-
-Do not make up facts.
-Do not mention page numbers.
-Do not mention sources.
-
-Context:
-
-{context}
-
-Question:
-{question}
-"""
+    prompt = build_prompt(
+        question,
+        context,
+        history
+    )
 
     for chunk in llm.stream(prompt):
-        if chunk.content:
-            yield chunk.content
 
+        if chunk.content:
+
+            yield chunk.content

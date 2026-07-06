@@ -8,6 +8,7 @@ import SourceModal from "./SourceModal";
 export default function ChatWindow({
   messages,
   setMessages,
+  currentChat,
   selectedDocuments,
 }) {
 
@@ -15,6 +16,7 @@ export default function ChatWindow({
 
   const openSource = async (source) => {
     try {
+
       const res = await api.get("/chunk", {
         params: {
           filename: source.filename,
@@ -26,87 +28,116 @@ export default function ChatWindow({
       setSelectedSource(res.data);
 
     } catch (err) {
+
       console.error(err);
+
     }
   };
 
   const handleSend = async (question) => {
 
-  // Add user message
-  setMessages((prev) => [
-    ...prev,
-    {
-      role: "user",
-      content: question,
-    },
-  ]);
+    if (!currentChat) {
 
-  const sessionId =
-    localStorage.getItem("session_id") ||
-    crypto.randomUUID();
+      alert("Please create a chat first.");
 
-  localStorage.setItem("session_id", sessionId);
+      return;
 
-  // Create empty assistant message
-  setMessages((prev) => [
-    ...prev,
-    {
-      role: "assistant",
-      content: "",
-      sources: [],
-    },
-  ]);
+    }
 
-  try {
+    // Add user message immediately
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "user",
+        content: question,
+      },
+    ]);
 
-    const response = await fetch(
-  "http://localhost:8000/ask-stream",
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      question,
-      session_id: sessionId,
-      documents: selectedDocuments,
-    }),
-  }
-);
+    // Empty assistant message for streaming
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content: "",
+        sources: [],
+      },
+    ]);
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
+    try {
 
-    let answer = "";
-    let sources = [];
-    let buffer = "";
-    let readingSources = false;
+      const response = await fetch(
+        "http://localhost:8000/ask-stream",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            chat_id: currentChat,
+            question,
+            documents: selectedDocuments,
+          }),
+        }
+      );
 
-    while (true) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
 
-      const { done, value } = await reader.read();
+      let answer = "";
+      let sources = [];
+      let buffer = "";
+      let readingSources = false;
 
-      if (done) break;
+      while (true) {
 
-      const chunk = decoder.decode(value);
+        const { done, value } = await reader.read();
 
-      if (!readingSources) {
+        if (done) break;
 
-        if (chunk.includes("<END_SOURCES>")) {
+        const chunk = decoder.decode(value);
 
-          const parts = chunk.split("<END_SOURCES>");
+        if (!readingSources) {
 
-          answer += parts[0];
+          if (chunk.includes("<END_SOURCES>")) {
 
-          buffer += parts[1];
+            const parts = chunk.split("<END_SOURCES>");
 
-          readingSources = true;
+            answer += parts[0];
+
+            buffer += parts[1];
+
+            readingSources = true;
+
+          } else {
+
+            answer += chunk;
+
+          }
+
+          setMessages((prev) => {
+
+            const updated = [...prev];
+
+            updated[updated.length - 1] = {
+              role: "assistant",
+              content: answer,
+              sources,
+            };
+
+            return updated;
+
+          });
 
         } else {
 
-          answer += chunk;
+          buffer += chunk;
 
         }
+      }
+
+      if (buffer.trim()) {
+
+        sources = JSON.parse(buffer);
 
         setMessages((prev) => {
 
@@ -122,37 +153,14 @@ export default function ChatWindow({
 
         });
 
-      } else {
-
-        buffer += chunk;
-
       }
-    }
 
-    if (buffer.trim()) {
+    } catch (err) {
 
-      sources = JSON.parse(buffer);
-
-      setMessages((prev) => {
-
-        const updated = [...prev];
-
-        updated[updated.length - 1] = {
-          role: "assistant",
-          content: answer,
-          sources,
-        };
-
-        return updated;
-
-      });
+      console.error(err);
 
     }
-
-  } catch (err) {
-    console.error(err);
-  }
-};
+  };
 
   return (
     <>
