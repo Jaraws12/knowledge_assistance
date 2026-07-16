@@ -66,3 +66,30 @@ def rename_chat(
     db.refresh(chat)
 
     return chat
+
+
+
+
+
+def update_chat_title(
+    db: Session,
+    chat_id: int,
+    title: str
+):
+
+    chat = get_chat(db, chat_id)
+
+    if chat is None:
+        return None
+
+    # Only update if it's still the default title
+    if chat.title != "New Chat":
+        return chat
+
+    chat.title = title
+
+    db.commit()
+
+    db.refresh(chat)
+
+    return chat

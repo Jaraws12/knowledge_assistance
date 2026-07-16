@@ -114,3 +114,24 @@ def stream_answer(
         if chunk.content:
 
             yield chunk.content
+            
+
+def generate_chat_title(question: str):
+
+    prompt = f"""
+Generate a short chat title.
+
+Rules:
+- Maximum 5 words.
+- No quotation marks.
+- No punctuation at the end.
+- Only output the title.
+
+User's first message:
+
+{question}
+"""
+
+    response = llm.invoke(prompt)
+
+    return response.content.strip()                        

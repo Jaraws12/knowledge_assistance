@@ -6,10 +6,13 @@ import Message from "./Message";
 import SourceModal from "./SourceModal";
 
 export default function ChatWindow({
-  messages,
-  setMessages,
-  currentChat,
-  selectedDocuments,
+    messages,
+    setMessages,
+    currentChat,
+    setCurrentChat,
+    selectedDocuments,
+    setRefreshChats
+
 }) {
 
   const [selectedSource, setSelectedSource] = useState(null);
@@ -36,14 +39,29 @@ export default function ChatWindow({
 
   const handleSend = async (question) => {
 
-    if (!currentChat) {
+   let chatId = currentChat;
 
-      alert("Please create a chat first.");
+if (!chatId) {
 
-      return;
+  try {
 
-    }
+   const res = await api.post("/chats");
 
+chatId = res.data.id;
+
+setCurrentChat(chatId);
+
+setRefreshChats(prev => !prev);
+
+  } catch (err) {
+
+    console.error(err);
+
+    return;
+
+  }
+
+}
     // Add user message immediately
     setMessages((prev) => [
       ...prev,
@@ -73,7 +91,7 @@ export default function ChatWindow({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            chat_id: currentChat,
+            chat_id: chatId,
             question,
             documents: selectedDocuments,
           }),
@@ -135,25 +153,27 @@ export default function ChatWindow({
         }
       }
 
-      if (buffer.trim()) {
+     if (buffer.trim()) {
 
-        sources = JSON.parse(buffer);
+    sources = JSON.parse(buffer);
 
-        setMessages((prev) => {
+    setMessages((prev) => {
 
-          const updated = [...prev];
+        const updated = [...prev];
 
-          updated[updated.length - 1] = {
+        updated[updated.length - 1] = {
             role: "assistant",
             content: answer,
             sources,
-          };
+        };
 
-          return updated;
+        return updated;
 
-        });
+    });
 
-      }
+}
+
+setRefreshChats(prev => !prev);
 
     } catch (err) {
 

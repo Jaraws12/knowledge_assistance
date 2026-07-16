@@ -5,7 +5,8 @@ export default function ChatSidebar({
 
     currentChat,
     setCurrentChat,
-    setMessages
+    setMessages,
+    refreshChats
 
 }) {
 
@@ -31,9 +32,9 @@ const [editedTitle, setEditedTitle] = useState("");
 
     useEffect(() => {
 
-        loadChats();
+    loadChats();
 
-    }, []);
+}, [refreshChats]);
 
     const createChat = async () => {
 

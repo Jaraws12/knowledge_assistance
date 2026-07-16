@@ -3,8 +3,15 @@ import json
 from services.vectorstore_service import similarity_search
 from services.bm25_service import bm25_search
 from services.reranker_service import rerank
-from services.llm_service import generate_answer
-from services.llm_service import stream_answer
+from services.llm_service import (
+    generate_answer,
+    stream_answer,
+    generate_chat_title
+)
+from services.chat_service import (
+    get_chat,
+    update_chat_title
+)
 
 from services.message_service import (
     add_message,
@@ -177,6 +184,16 @@ def ask_question(
         "assistant",
         answer
     )
+    chat = get_chat(db, chat_id)
+    if chat.title == "New Chat":
+        title = generate_chat_title(question)
+        update_chat_title(
+        db,
+        chat_id,
+        title
+    )
+    
+    
 
     return {
         "answer": answer,
@@ -250,6 +267,14 @@ def stream_question(
         chat_id,
         "assistant",
         full_answer
+    )
+    chat = get_chat(db, chat_id)
+    if chat.title == "New Chat":
+        title = generate_chat_title(question)
+        update_chat_title(
+        db,
+        chat_id,
+        title
     )
 
     # -----------------------------

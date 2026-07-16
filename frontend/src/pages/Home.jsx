@@ -12,15 +12,18 @@ export default function Home() {
 
   const [selectedDocuments, setSelectedDocuments] = useState([]);
 
+  const [refreshChats, setRefreshChats] = useState(false);
+
   return (
     <div className="h-screen flex bg-slate-950">
 
       {/* Chat History Sidebar */}
       <ChatSidebar
-        currentChat={currentChat}
-        setCurrentChat={setCurrentChat}
-        setMessages={setMessages}
-      />
+    currentChat={currentChat}
+    setCurrentChat={setCurrentChat}
+    setMessages={setMessages}
+    refreshChats={refreshChats}
+/>
 
       {/* Uploaded Documents Sidebar */}
       <Sidebar
@@ -30,12 +33,14 @@ export default function Home() {
 
       {/* Main Chat Window */}
       <div className="flex-1">
-        <ChatWindow
-          messages={messages}
-          setMessages={setMessages}
-          currentChat={currentChat}
-          selectedDocuments={selectedDocuments}
-        />
+       <ChatWindow
+    messages={messages}
+    setMessages={setMessages}
+    currentChat={currentChat}
+    setCurrentChat={setCurrentChat}
+    selectedDocuments={selectedDocuments}
+    setRefreshChats={setRefreshChats}
+/>
       </div>
 
     </div>
