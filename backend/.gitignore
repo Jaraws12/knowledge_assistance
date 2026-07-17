@@ -28,27 +28,28 @@ deploy_env/
 .pytest_cache/
 
 # ----------------------------
-# Uploaded PDFs
+# Uploads (keep folder, ignore contents)
 # ----------------------------
-uploads/
+uploads/*
+!uploads/.gitkeep
 
 # ----------------------------
-# FAISS Vector Store
+# FAISS Vector Store (keep folder, ignore contents)
 # ----------------------------
-vectorstore/
+vectorstore/*
+!vectorstore/.gitkeep
 
 # ----------------------------
-# Metadata
+# Metadata (keep folder, ignore contents)
 # ----------------------------
-metadata/
+metadata/*
+!metadata/.gitkeep
 
 # ----------------------------
 # SQLite Database
 # ----------------------------
 *.db
 
-# ----------------------------
-# OS Files
 # ----------------------------
 # OS Files
 # ----------------------------
