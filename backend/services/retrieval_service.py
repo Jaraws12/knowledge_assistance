@@ -2,7 +2,7 @@ import json
 
 from services.vectorstore_service import similarity_search
 from services.bm25_service import bm25_search
-from services.reranker_service import rerank
+#from services.reranker_service import rerank
 from services.llm_service import (
     generate_answer,
     stream_answer,
@@ -66,11 +66,8 @@ def retrieve_context(
     # -----------------------------
     # Cross Encoder Reranking
     # -----------------------------
-    results = rerank(
-        question,
-        results,
-        top_k=top_k
-    )
+    
+    results = results[:top_k]
 
     # -----------------------------
     # Build Context
@@ -106,21 +103,20 @@ CONTENT:
 
             sources.append({
 
-                "filename": filename,
-                "page": page,
-                "chunk": chunk,
+    "filename": filename,
+    "page": page,
+    "chunk": chunk,
 
-                "vector_score": doc.metadata.get("vector_score"),
-                "bm25_score": doc.metadata.get("bm25_score"),
-                "rerank_score": doc.metadata.get("rerank_score"),
+    "vector_score": doc.metadata.get("vector_score"),
+    "bm25_score": doc.metadata.get("bm25_score"),
 
-                "excerpt": (
-                    doc.page_content[:350]
-                    if len(doc.page_content) > 350
-                    else doc.page_content
-                )
+    "excerpt": (
+        doc.page_content[:350]
+        if len(doc.page_content) > 350
+        else doc.page_content
+    )
 
-            })
+})
 
     return context, sources
 
