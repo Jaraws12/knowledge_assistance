@@ -3,18 +3,9 @@ from pathlib import Path
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 
-embedding_model = None
-
-
-def get_embedding_model():
-    global embedding_model
-
-    if embedding_model is None:
-        embedding_model = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2"
-        )
-
-    return embedding_model
+embedding_model = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/all-MiniLM-L6-v2"
+)
 
 
 def get_vectorstore():
@@ -24,11 +15,9 @@ def get_vectorstore():
     if not vectorstore_path.exists():
         return None
 
-    embedding = get_embedding_model()
-
     return FAISS.load_local(
         str(vectorstore_path),
-        embedding,
+        embedding_model,
         allow_dangerous_deserialization=True
     )
 
@@ -44,6 +33,7 @@ def similarity_search(
     if db is None:
         return []
 
+    # Retrieve extra results because we'll filter afterwards
     results = db.similarity_search_with_score(
         query,
         k=25
@@ -55,6 +45,8 @@ def similarity_search(
 
         filename = doc.metadata.get("filename")
 
+        # If document filter is provided,
+        # ignore documents that are not selected.
         if documents and filename not in documents:
             continue
 
