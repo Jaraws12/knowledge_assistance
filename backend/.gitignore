@@ -15,14 +15,13 @@ deploy_env/
 .pytest_cache/
 
 # Uploaded PDFs
-uploads/
+
 
 # FAISS Vector Store
-vectorstore/
+
 
 # Metadata
-metadata/chunks.pkl
-metadata/indexed_files.json
+
 
 # OS
 .DS_Store
